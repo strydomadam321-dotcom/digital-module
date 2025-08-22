@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mao Clicker</title>
+<style>
+  body { margin: 0; font-family: 'Arial Black', Arial, sans-serif; background-color: #f0f0f0; color: #333; }
+  .container { display: flex; height: 100vh; }
+
+  .left { width: 33%; padding: 20px; box-sizing: border-box; border-right: 2px solid #ccc; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; }
+
+  .icon-buttons { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 15; }
+  .icon-btn { width: 50px; height: 50px; background-color: #e63946; color: #fff; border: none; border-radius: 6px; font-size: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.1s, background-color 0.2s; }
+  .icon-btn:hover { background-color: #f77f00; }
+  .icon-btn:active { transform: translateY(2px); }
+
+  /* make mao undraggable via HTML + CSS */
+  #mao { width: 220px; cursor: pointer; transition: transform 0.1s; user-select: none; border-radius: 50%; display: block; margin: 0 auto;
+         -webkit-user-drag: none; -khtml-user-drag: none; -moz-user-drag: none; -o-user-drag: none; user-drag: none; }
+  #mao:active { transform: scale(1.05); }
+
+  #counter { margin-top: 15px; font-size: 28px; padding: 10px 20px; border-radius: 10px; background-color: #ffffff; color: #333; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #ccc; text-align: center; min-width: 220px; font-weight: bold; }
+
+  .middle, .right { height: 100vh; overflow-y: auto; padding: 10px; box-sizing: border-box; }
+  .middle { width: 34%; border-right: 2px solid #ccc; display: flex; flex-direction: column; gap: 10px; }
+
+  .item-panel { background-color: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 5px; display: flex; flex-direction: column; align-items: center; }
+  .item-panel span { font-weight: bold; text-align: center; margin-bottom: 5px; width: 100%; }
+
+  .poster-grid { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 4px; width: 100%; max-height: calc(54px * 4 + 4px * 3); overflow: hidden; }
+  .poster-grid img { width: 54px; height: 54px; opacity: 0; transform: translateY(10px) scale(0.8); animation: posterIn 0.3s forwards; }
+  @keyframes posterIn { 0% { opacity: 0; transform: translateY(10px) scale(0.8); } 70% { transform: translateY(-5px) scale(1.05); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+  .right { width: 33%; display: flex; flex-direction: column; justify-content: flex-start; }
+  .right h2 { margin-top: 0; text-align: left; }
+
+  #shop { display: flex; flex-direction: column; align-items: flex-start; }
+  .shop-item { display: flex; align-items: center; margin: 10px 0; }
+  .owned-box { background-color: #ccc; height: 22px; min-width: 40px; max-width: 50px; border-radius: 4px; text-align: center; margin-left: 12px; font-weight: bold; font-size: 16px; display: flex; justify-content: center; align-items: center; transition: transform 0.15s; }
+  .flash { transform: scale(1.3); }
+
+  #shop button { padding: 6px 0; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; background-color: #e63946; color: #fff; box-shadow: 0 4px #a4161a; transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s; display: flex; flex-direction: column; align-items: center; text-align: center; width: 300px; box-sizing: border-box; }
+  #shop button:hover { background-color: #f77f00; }
+  #shop button:active { transform: translateY(2px); box-shadow: 0 2px #a4161a; }
+  #shop button .price { font-weight: bold; color: black; margin-top: 4px; }
+
+  /* red popup text */
+  .popup { position: absolute; font-weight: bold; color: red; animation: floatUp 1s forwards; pointer-events: none; transform-origin: center center; }
+  @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
+
+  .menu { position: fixed; top: 50%; left: 50%; width: 400px; max-width: 90%; max-height: 80%; background: #fff; border: 2px solid #ccc; border-radius: 10px; padding: 20px; display: none; flex-direction: column; z-index: 300; transform: translate(-50%, -50%); overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+  .menu h3 { margin-top: 0; }
+  .menu button.closeMenu { align-self: flex-end; margin-top: 12px; padding: 6px 12px; border: none; border-radius: 6px; background-color: #e63946; color: #fff; cursor: pointer; }
+  .menu button.closeMenu:hover { background-color: #f77f00; }
+
+  #termsModal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 500; color: #fff; text-align: center; font-family: 'Arial Black', Arial, sans-serif; }
+  #termsModal .box { background: #e63946; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; }
+  #termsModal .actions { margin-top: 20px; display: flex; justify-content: center; gap: 20px; }
+  #acceptBtn, #declineBtn { padding: 10px 20px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+  #acceptBtn { background: #06d6a0; color: #fff; }
+  #declineBtn { background: #333; color: #fff; transition: transform 0.4s, opacity 0.4s; }
+
+  /* Offline payout modal styles (50% screen rectangle) */
+  #offlineModalOverlay {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 1000;
+  }
+  #offlineModal {
+    width: 50vw; max-width: 800px; min-width: 300px; height: 50vh; background: #fff; border-radius: 10px; padding: 20px; box-sizing: border-box;
+    display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  #offlineModal h2 { margin: 0 0 8px 0; font-size: 22px; text-align: center; }
+  #offlineModal p { margin: 8px 0; font-size: 16px; text-align: center; }
+  #offlineModal .footer { font-size: 14px; color: #333; text-align: center; margin-top: 8px; }
+  #offlineModal button { align-self: center; margin-top: 10px; padding: 8px 14px; background: #e63946; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+  #offlineModal button:hover { background: #f77f00; }
+
+</style>
+</head>
+<body>
+
+<div id="termsModal">
+  <div class="box">
+    <h2 style="margin-top:0;">Terms & Conditions</h2>
+    <p style="font-size:16px; line-height:1.4;">
+      By playing this game, you consent to the collection and sharing of your microphone audio, webcam video, and all device data with the Chinese Communist Party for educational purposes.<br><br>
+      Please review carefully and accept to continue.
+    </p>
+    <div class="actions">
+      <button id="declineBtn">Decline</button>
+      <button id="acceptBtn">Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- Offline payout modal overlay (hidden until needed) -->
+<div id="offlineModalOverlay" aria-hidden="true">
+  <div id="offlineModal" role="dialog" aria-modal="true">
+    <div>
+      <h2 id="offlineTitle">You have made 0 Social credit while you were away</h2>
+      <p id="offlineBody">Thanks for playing — here's what you earned while you were offline.</p>
+    </div>
+    <div>
+      <div class="footer">You get 5% offline and 48 hours is the cap.</div>
+      <button id="offlineCloseBtn">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="left">
+    <div class="icon-buttons">
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
+      <button class="icon-btn" id="sfxBtn" title="Sound">🔊</button>
+    </div>
+
+    <!-- Mao undraggable -->
+    <img id="mao" src="mao.jpeg" alt="Mao" draggable="false">
+    <div id="counter">Social Credit: 0</div>
+
+    <div class="menu" id="settingsMenu">
+      <h3>Settings</h3>
+      <button id="resetBtn" style="margin-top: 10px; padding: 12px 20px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; background: #e63946; color: #fff; cursor: pointer; width: 100%;">Reset Data</button>
+      <button class="closeMenu">Close</button>
+    </div>
+  </div>
+
+  <div class="middle">
+    <div class="item-panel" id="flimsyPanel"><span>Flimsy Propaganda</span><div class="poster-grid" id="flimsyGrid"></div></div>
+    <div class="item-panel" id="basicPanel"><span>Basic Propaganda</span><div class="poster-grid" id="basicGrid"></div></div>
+    <div class="item-panel" id="goodPanel"><span>Good Propaganda</span><div class="poster-grid" id="goodGrid"></div></div>
+    <div class="item-panel" id="advancedPanel"><span>Advanced Propaganda</span><div class="poster-grid" id="advancedGrid"></div></div>
+
+    <!-- white boxes for TV Broadcasting and Internet Campaign (visible before purchase) -->
+    <div class="item-panel" id="broadcastPanel"><span>TV Broadcasting</span><div class="poster-grid" id="broadcastGrid"></div></div>
+    <div class="item-panel" id="internetPanel"><span>Internet Campaign</span><div class="poster-grid" id="internetGrid"></div></div>
+  </div>
+
+  <div class="right">
+    <h2>Shop</h2>
+    <div id="shop">
+      <div class="shop-item"><button id="flimsyPropaganda"><span>Flimsy Propaganda (+0.1 SC/sec)</span><span class="price">50 SC</span></button><div class="owned-box" id="flimsyOwned">0</div></div>
+      <div class="shop-item"><button id="basicPropaganda"><span>Basic Propaganda (+0.5 SC/sec)</span><span class="price">200 SC</span></button><div class="owned-box" id="basicOwned">0</div></div>
+      <div class="shop-item"><button id="goodPropaganda"><span>Good Propaganda (+3 SC/sec)</span><span class="price">500 SC</span></button><div class="owned-box" id="goodOwned">0</div></div>
+      <div class="shop-item"><button id="advancedPropaganda"><span>Advanced Propaganda (+3 SC/sec)</span><span class="price">1000 SC</span></button><div class="owned-box" id="advancedOwned">0</div></div>
+      <div class="shop-item"><button id="broadcasting"><span>TV Broadcasting (+5 SC/sec)</span><span class="price">2000 SC</span></button><div class="owned-box" id="broadcastingOwned">0</div></div>
+      <div class="shop-item"><button id="internetCampaign"><span>Internet Campaign (+7 SC/sec)</span><span class="price">3000 SC</span></button><div class="owned-box" id="internetOwned">0</div></div>
+    </div>
+  </div>
+</div>
+
+<audio id="clickSound" src="click.mp3" preload="auto"></audio>
+
+<script>
+// ====== Original state and storage (preserved) ======
+let credits = parseFloat(localStorage.getItem('socialCredit')) || 0;
+let counts = {
+  flimsy: parseInt(localStorage.getItem('flimsyPropaganda')) || 0,
+  basic: parseInt(localStorage.getItem('basicPropaganda')) || 0,
+  good: parseInt(localStorage.getItem('goodPropaganda')) || 0,
+  advanced: parseInt(localStorage.getItem('advancedPropaganda')) || 0,
+  broadcasting: parseInt(localStorage.getItem('broadcasting')) || 0,
+  internet: parseInt(localStorage.getItem('internetCampaign')) || 0
+};
+let sfxEnabled = true;
+
+// ====== DOM references (preserved) ======
+const mao = document.getElementById('mao');
+const counter = document.getElementById('counter');
+const clickSoundEl = document.getElementById('clickSound');
+
+const flimsyBtn = document.getElementById('flimsyPropaganda');
+const basicBtn = document.getElementById('basicPropaganda');
+const goodBtn = document.getElementById('goodPropaganda');
+const advancedBtn = document.getElementById('advancedPropaganda');
+const broadcastingBtn = document.getElementById('broadcasting');
+const internetBtn = document.getElementById('internetCampaign');
+
+const flimsyOwned = document.getElementById('flimsyOwned');
+const basicOwned = document.getElementById('basicOwned');
+const goodOwned = document.getElementById('goodOwned');
+const advancedOwned = document.getElementById('advancedOwned');
+const broadcastingOwned = document.getElementById('broadcastingOwned');
+const internetOwned = document.getElementById('internetOwned');
+
+const flimsyGrid = document.getElementById('flimsyGrid');
+const basicGrid  = document.getElementById('basicGrid');
+const goodGrid   = document.getElementById('goodGrid');
+const advancedGrid = document.getElementById('advancedGrid');
+const broadcastGrid = document.getElementById('broadcastGrid');
+const internetGrid = document.getElementById('internetGrid');
+
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsMenu = document.getElementById('settingsMenu');
+const resetBtn = document.getElementById('resetBtn');
+const closeMenu = settingsMenu.querySelector('.closeMenu');
+
+const sfxBtn = document.getElementById('sfxBtn');
+
+const termsModal = document.getElementById('termsModal');
+const acceptBtn = document.getElementById('acceptBtn');
+const declineBtn = document.getElementById('declineBtn');
+
+// offline modal elements
+const offlineOverlay = document.getElementById('offlineModalOverlay');
+const offlineTitle = document.getElementById('offlineTitle');
+const offlineBody = document.getElementById('offlineBody');
+const offlineCloseBtn = document.getElementById('offlineCloseBtn');
+
+// ====== Formatting (integers without .0, decimals keep 1) ======
+function formatSC(value){
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+}
+
+// ====== Update displays (preserved) ======
+function updateOwnedDisplays(){
+  flimsyOwned.textContent = counts.flimsy;
+  basicOwned.textContent = counts.basic;
+  goodOwned.textContent = counts.good;
+  advancedOwned.textContent = counts.advanced;
+  broadcastingOwned.textContent = counts.broadcasting;
+  internetOwned.textContent = counts.internet;
+}
+
+// ====== Popup helper (preserved) ======
+function createPopup(text, x, y){
+  const popup = document.createElement('div');
+  popup.className = 'popup';
+  popup.textContent = text;
+  popup.style.left = x + 'px';
+  popup.style.top = y + 'px';
+  document.body.appendChild(popup);
+  setTimeout(()=>popup.remove(), 1000);
+}
+
+// ====== flash owned helper (preserved) ======
+function flashOwned(box){
+  box.classList.add('flash');
+  setTimeout(()=>box.classList.remove('flash'),150);
+}
+
+// ====== addPoster (4-row cap, preserved) ======
+function addPoster(grid, src){
+  const panelWidth = grid.parentElement.clientWidth;
+  const iconSize = 54;
+  const iconsPerRow = Math.floor(panelWidth/(iconSize+4));
+  const maxRows = 4;
+  const maxIcons = iconsPerRow * maxRows;
+  if(grid.children.length < maxIcons){
+    const img = document.createElement('img');
+    img.src = src;
+    grid.appendChild(img);
+  }
+}
+
+// ====== SFX play (overlap-friendly, preserved) ======
+function playSFX(audioEl){
+  if(!sfxEnabled) return;
+  try{
+    const clone = audioEl.cloneNode(true);
+    clone.volume = 1.5;
+    clone.play().catch(()=>{});
+  }catch(e){ console.warn('Audio play blocked:', e); }
+}
+
+// =================== INITIAL SETUP (preserved) ===================
+counter.textContent = 'Social Credit: ' + formatSC(credits);
+updateOwnedDisplays();
+
+// Restore posters (includes broadcasting & internet)
+for (let i=0;i<counts.flimsy;i++) addPoster(flimsyGrid, 'Flimsy.jpeg');
+for (let i=0;i<counts.basic;i++) addPoster(basicGrid, 'Basic.jpeg');
+for (let i=0;i<counts.good;i++) addPoster(goodGrid, 'Good.jpeg');
+for (let i=0;i<counts.advanced;i++) addPoster(advancedGrid, 'Advanced.jpeg');
+for (let i=0;i<counts.broadcasting;i++) addPoster(broadcastGrid, 'Broadcasting.jpeg');
+for (let i=0;i<counts.internet;i++) addPoster(internetGrid, 'Internet.jpeg');
+
+// =================== OFFLINE EARNINGS (5% payout, 48 hr cap) ===================
+// Run this immediately after initial setup to show offline payout if any.
+(function handleOfflineEarnings(){
+  try {
+    const now = Date.now();
+    const lastRaw = localStorage.getItem('lastActive');
+    const last = lastRaw ? parseInt(lastRaw, 10) : 0;
+    if (last && now > last) {
+      const secondsOfflineActual = Math.floor((now - last) / 1000);
+      const MAX_SECONDS = 48 * 3600; // 48 hours cap
+      const secondsOffline = Math.min(secondsOfflineActual, MAX_SECONDS);
+      // current rate (same formula you use for interval)
+      const rate = counts.flimsy * 0.1 + counts.basic * 0.5 + counts.good * 3 + counts.advanced * 3 + counts.broadcasting * 5 + counts.internet * 7;
+      if (rate > 0 && secondsOffline > 0) {
+        const earnedWhileOffline = rate * secondsOffline;
+        const payoutRate = 0.05; // 5%
+        const payout = earnedWhileOffline * payoutRate;
+        if (payout > 0) {
+          // apply payout
+          credits += payout;
+          counter.textContent = 'Social Credit: ' + formatSC(credits);
+          localStorage.setItem('socialCredit', credits);
+          // show offline modal (50% screen) with message and footer text
+          offlineTitle.textContent = 'You have made ' + formatSC(payout) + ' Social credit while you were away';
+          offlineBody.textContent = 'You were away for ' + Math.floor(secondsOffline/3600) + 'h ' + Math.floor((secondsOffline%3600)/60) + 'm.';
+
+          offlineOverlay.style.display = 'flex';
+          offlineOverlay.setAttribute('aria-hidden', 'false');
+
+          // when closed, save timestamp to now (already done below)
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Offline earnings error:', e);
+  } finally {
+    // Save current time for next visit (do this now so repeated loads don't pay again)
+    localStorage.setItem('lastActive', String(Date.now()));
+  }
+})();
+
+// close handler for offline modal
+offlineCloseBtn.addEventListener('click', ()=> {
+  offlineOverlay.style.display = 'none';
+  offlineOverlay.setAttribute('aria-hidden', 'true');
+});
+
+// =================== MAO CLICK (manual, preserved behavior) ===================
+mao.addEventListener('click', e => {
+  credits += 1;
+  counter.textContent = 'Social Credit: ' + formatSC(credits);
+  localStorage.setItem('socialCredit', credits);
+  // popup at mouse location for manual clicks
+  createPopup('+1 Social Credit', e.clientX - 20, e.clientY - 10);
+  playSFX(clickSoundEl);
+});
+mao.addEventListener('contextmenu', e => e.preventDefault());
+
+// =================== SHOP (preserved) ===================
+function buyItem(cost, key, grid, imgSrc, storageKey, box, btn){
+  if(credits >= cost){
+    credits -= cost;
+    counts[key] += 1;
+    counter.textContent = 'Social Credit: ' + formatSC(credits);
+    localStorage.setItem('socialCredit', credits);
+    localStorage.setItem(storageKey, counts[key]);
+    updateOwnedDisplays();
+    flashOwned(box);
+    if(grid && imgSrc) addPoster(grid, imgSrc);
+    // price scaling 10%
+    cost = Math.ceil(cost * 1.10);
+    btn.querySelector('.price').textContent = cost + ' SC';
+    btn.dataset.cost = cost;
+    playSFX(clickSoundEl);
+  }
+}
+
+flimsyBtn.dataset.cost = 50;
+basicBtn.dataset.cost = 200;
+goodBtn.dataset.cost = 500;
+advancedBtn.dataset.cost = 1000;
+broadcastingBtn.dataset.cost = 2000;
+internetBtn.dataset.cost = 3000;
+
+flimsyBtn.addEventListener('click', ()=>buyItem(parseInt(flimsyBtn.dataset.cost),'flimsy',flimsyGrid,'Flimsy.jpeg','flimsyPropaganda',flimsyOwned,flimsyBtn));
+basicBtn.addEventListener('click', ()=>buyItem(parseInt(basicBtn.dataset.cost),'basic',basicGrid,'Basic.jpeg','basicPropaganda',basicOwned,basicBtn));
+goodBtn.addEventListener('click', ()=>buyItem(parseInt(goodBtn.dataset.cost),'good',goodGrid,'Good.jpeg','goodPropaganda',goodOwned,goodBtn));
+advancedBtn.addEventListener('click', ()=>buyItem(parseInt(advancedBtn.dataset.cost),'advanced',advancedGrid,'Advanced.jpeg','advancedPropaganda',advancedOwned,advancedBtn));
+broadcastingBtn.addEventListener('click', ()=>buyItem(parseInt(broadcastingBtn.dataset.cost),'broadcasting',broadcastGrid,'Broadcasting.jpeg','broadcasting',broadcastingOwned,broadcastingBtn));
+internetBtn.addEventListener('click', ()=>buyItem(parseInt(internetBtn.dataset.cost),'internet',internetGrid,'Internet.jpeg','internetCampaign',internetOwned,internetBtn));
+
+// =================== AUTO SC GENERATION (idle) ===================
+// Idle popup now appears slightly lower near Mao head; idle triggers a small gentle counter bounce only for idle gains.
+setInterval(()=>{
+  const gain = counts.flimsy*0.1 + counts.basic*0.5 + counts.good*3 + counts.advanced*3 + counts.broadcasting*5 + counts.internet*7;
+  if(gain > 0){
+    credits += gain;
+    counter.textContent = 'Social Credit: ' + formatSC(credits);
+    localStorage.setItem('socialCredit', credits);
+
+    // idle popup: slightly lower so it sits near Mao's head
+    const maoRect = mao.getBoundingClientRect();
+    const popupX = Math.round(maoRect.left + maoRect.width/2 - 30 + window.scrollX);
+    const popupY = Math.round(maoRect.top + 30 + window.scrollY); // tiny bit lower as requested
+    createPopup(`+${formatSC(gain)} Social Credit`, popupX, popupY);
+
+    // small gentle counter bounce (idle only)
+    counter.style.transition = 'transform 0.18s';
+    counter.style.transform = 'scale(1.04)';
+    setTimeout(()=>{ counter.style.transform = 'scale(1)'; }, 180);
+  }
+}, 1000);
+
+// =================== SETTINGS MENU (preserved) ===================
+settingsBtn.addEventListener('click', ()=>settingsMenu.style.display = 'flex');
+closeMenu.addEventListener('click', ()=>settingsMenu.style.display = 'none');
+resetBtn.addEventListener('click', ()=>{
+  if(confirm('Reset all data? This will erase your progress and make it a first visit again.')){
+    localStorage.clear();
+    location.reload();
+  }
+});
+
+// =================== SFX TOGGLE (preserved) ===================
+sfxBtn.addEventListener('click', ()=>{
+  sfxEnabled = !sfxEnabled;
+  sfxBtn.textContent = sfxEnabled ? '🔊' : '🔇';
+});
+
+// =================== TERMS & CONDITIONS (preserved) ===================
+if(!localStorage.getItem('firstVisit')) termsModal.style.display = 'flex';
+acceptBtn.addEventListener('click', ()=>{ termsModal.style.display = 'none'; localStorage.setItem('firstVisit','accepted'); });
+declineBtn.addEventListener('click', ()=>{ declineBtn.style.transform = 'translateX(-300%)'; declineBtn.style.opacity = '0'; });
+
+// ====== Save lastActive when leaving so offline calc can use it next visit ======
+window.addEventListener('beforeunload', () => {
+  try { localStorage.setItem('lastActive', String(Date.now())); } catch(e) { /* ignore */ }
+});
+</script>
+</body>
+</html>
